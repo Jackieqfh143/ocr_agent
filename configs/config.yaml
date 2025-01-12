@@ -1,0 +1,12 @@
+adb_path: "~/Android/Sdk/platform-tools/adb"
+save_dir: ./results
+max_op_time: 360 # seconds
+icon_sim_threshold: 0.6
+icon_detector:
+  device: cpu
+  segment_weight_path: weights/FastSAM-x.pt
+  metric_weight_path: weights/WaveMLP_M.pth.tar
+  metric_model: WaveMLP_M  # WaveMLP_S || WaveMLP_M || vgg19
+  save_dir: ./results/icon_detector
+  target_height: 224  #imagenet size (only for icon)
+  target_width: 224   #imagenet size (only for icon)

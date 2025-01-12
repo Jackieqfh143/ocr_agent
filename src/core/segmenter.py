@@ -17,6 +17,9 @@ class Segmenter():
         prompt_process = FastSAMPrompt(img_path, everything_results, device=device)
         res = prompt_process._format_results(everything_results[0])
         seg_res = self.extract_all_seg_imgs(res, img, self.save_dir)
+        ann = prompt_process.everything_prompt()
+        prompt_process.plot(annotations=ann, output_path=os.path.join(self.save_dir, get_uni_name() + "_colormap.png") )
+
         return seg_res
 
     def anti_aliasing(self, mask):
@@ -63,6 +66,9 @@ class Segmenter():
         return result
 
     def extract_all_seg_imgs(self, masks_list, source_img, save_dir):
+        save_dir = os.path.join(save_dir, "segments")
+        os.makedirs(save_dir, exist_ok=True)
+
         seg_imgs = []
 
         img_copy = source_img.copy()

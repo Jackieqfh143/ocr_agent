@@ -8,7 +8,7 @@ if __name__ == '__main__':
     os.makedirs(save_dir, exist_ok=True)
 
     source_img = './imgs/demo.jpg'
-    icon_img = './imgs/icon.png'
+    icon_img = './imgs/tiktok_comments.png'
 
     detector = IconDetector(device='cpu', weight_path=weight_path, metric_model='vgg19'
                             ,save_dir=save_dir, target_height= 224, target_width=224)

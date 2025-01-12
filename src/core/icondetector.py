@@ -2,34 +2,37 @@ import os.path
 import time
 import cv2
 import torch
-from src.models.vggNet import VGG
 from src.core.segmenter import Segmenter
 from src.core.metrics import Metrics
+from src.models.model import load_pretrained_model
 from PIL import Image
 import numpy as np
 from tqdm import tqdm
-from src.utils.util import draw_bbox, draw_text,get_uni_name
+from src.utils.util import draw_bbox, draw_text,get_uni_name,load_image
 
 class IconDetector():
-    def __init__(self, device = 'cpu', weight_path = './weights', metric_model = 'vgg19', save_dir = './results', target_height = 224, target_width = 224):
+    def __init__(self, device = 'cpu', segment_weight_path = "./weights", metric_weight_path = './weights', metric_model = 'vgg19', save_dir = './results', target_height = 224, target_width = 224):
         self.device = device
-        self.metric_model = VGG(device, modelName=metric_model)
-        self.seg_model = Segmenter(weight_path, save_dir= save_dir)
+        self.save_dir = os.path.join(save_dir, get_uni_name())
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.metric_model = load_pretrained_model(weight_path=metric_weight_path, modelName=metric_model, device=device)
+        self.seg_model = Segmenter(weight_path=segment_weight_path, save_dir=  self.save_dir)
         self.metrics = Metrics(device)
         self.target_height = target_height
         self.target_width = target_width
-        self.save_dir = save_dir
 
 
-    def det(self, source_img, icon_img, batch_size = 8):
+    @torch.no_grad()
+    def det(self, source_img, icon_img, batch_size = 32, topK = 1):
         start_time = time.time()
-        input_img = np.array(Image.open(source_img))
+        input_img = np.array(load_image(source_img))
         seg_res = self.seg_model.run(source_img, self.device)
         scores = []
-        max_score = 0
-        res_bbox = None
         temp_list = []
         temp_bbox_list = []
+        det_res = []
+        img2_t = self.load_img(icon_img)
+        pred2 = self.metric_model.forward(img2_t)
         for i, (img, bbox) in tqdm(enumerate(seg_res)):
             img1_t = self.load_img(img)
             temp_list.append(img1_t)
@@ -37,18 +40,13 @@ class IconDetector():
             if len(temp_list) % batch_size != 0 and i < len(seg_res) - 1:
                 continue
 
-            img2_t = self.load_img(icon_img)
             pred1  = self.metric_model.forward(torch.concat(temp_list, dim=0))
-            pred2 = self.metric_model.forward(img2_t)
             score_list_tmp = self.metrics.cos_metric(pred1, pred2)
             for j, score in enumerate(score_list_tmp):
                 score = str(format(score.cpu().numpy(), '.2f'))
-                print("\n score is " , score)
+                print("\n score is " , float(score))
                 scores.append(score)
-                if float(score) > max_score:
-                    input_img = draw_text(draw_bbox(input_img, bbox), bbox, score)
-                    res_bbox = temp_bbox_list[j]
-                    max_score = float(score)
+                det_res.append((score, temp_bbox_list[j]))
 
             temp_list.clear()
             temp_bbox_list.clear()
@@ -56,11 +54,24 @@ class IconDetector():
         print(f"Task finish in {time.time() - start_time} s")
         print("max score is: " + max(scores))
         print("min score is: " + min(scores))
-        input_img = draw_text(draw_bbox(input_img, res_bbox, color=(255, 0, 0)), res_bbox, str(max_score), text_color=(255, 0, 0))
+        det_res = sorted(det_res, key=lambda x: x[0], reverse=True)
+        top_k = det_res[:topK]
+        for i, (score, bbox) in enumerate(top_k):
+            if i == 0:
+                color = (255, 0, 0)
+            else:
+                color = (0, 0, 255)
+
+            input_img = draw_text(draw_bbox(input_img, bbox, color=color), bbox, str(score), text_color=color)
+
+
+        print("det_res: " , det_res)
         Image.fromarray(input_img).save(os.path.join(self.save_dir, get_uni_name() + "_pred_result.png"))
 
-        return res_bbox
-
+        if len(det_res) > 0 and len(det_res) >= topK:
+            return det_res[:topK]
+        else:
+            return det_res
 
 
     def img_preprocess(self, img):
@@ -74,11 +85,10 @@ class IconDetector():
         w,h = img_pil.size
         if (h != self.target_height or w != self.target_width):
             img_pil = img_pil.resize((self.target_width, self.target_height))
-            img_pil = Image.fromarray(cv2.medianBlur(np.array(img_pil), 5))
+            # img_pil = Image.fromarray(cv2.medianBlur(np.array(img_pil), 5))
             img_pil.save(os.path.join(self.save_dir, get_uni_name() + "_gray.png"))
 
         return img_pil
-
 
     def load_img(self, path, preprocess = True):
         if preprocess:

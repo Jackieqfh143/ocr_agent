@@ -178,7 +178,7 @@ class VGGFeatureExtractor(nn.Module):
         return output
 
 class VGG():
-    def __init__(self, device = 'cpu', modelName = 'vgg13'):
+    def __init__(self, device = 'cpu', modelName = 'vgg19'):
         super().__init__()
         self.net = VGGFeatureExtractor(vgg_type=modelName, layer_name_list=NAMES[modelName])
         self.net.eval().to(device)
@@ -188,4 +188,5 @@ class VGG():
             feats = self.net.forward(input)
             pred = torch.flatten(feats['pool5'], start_dim=1)
             return pred
+
 

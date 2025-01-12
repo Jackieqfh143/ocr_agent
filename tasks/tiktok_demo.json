@@ -1,0 +1,64 @@
+{
+    "actions": [
+        {
+            "action": "openAppByIcon",
+            "icon": "imgs/tiktok.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 8
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/tiktok_comments.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/tiktok_fullscreen.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "swipe",
+            "direction": "down",
+            "distance": 600,
+            "duration": 300
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "swipe",
+            "direction": "up",
+            "distance": 600,
+            "duration": 300
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "swipe",
+            "direction": "up",
+            "distance": 600,
+            "duration": 300
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "swipe",
+            "direction": "up",
+            "distance": 600,
+            "duration": 300
+        }
+    ]
+}
