@@ -2,7 +2,7 @@
     "actions": [
         {
             "action": "openAppByIcon",
-            "icon": "imgs/tiktok.png"
+            "icon": "imgs/tiktok/tiktok.png"
         },
         {
             "action": "sleep",
@@ -10,7 +10,7 @@
         },
         {
             "action": "click_icon",
-            "icon": "imgs/tiktok_comments.png"
+            "icon": "imgs/tiktok/tiktok_comments.png"
         },
         {
             "action": "sleep",
@@ -18,7 +18,7 @@
         },
         {
             "action": "click_icon",
-            "icon": "imgs/tiktok_fullscreen.png"
+            "icon": "imgs/tiktok/tiktok_fullscreen.png"
         },
         {
             "action": "sleep",

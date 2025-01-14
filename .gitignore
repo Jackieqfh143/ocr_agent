@@ -1,2 +1,7 @@
 .idea/
-./weights/
+./weights
+
+*.pth 
+
+*.pt
+*.tar

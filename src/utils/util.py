@@ -8,8 +8,9 @@ import cv2
 from datetime import datetime
 import uuid
 import requests
-from PIL import Image
-
+from PIL import Image, ImageDraw
+from PIL import ImageFont
+import numpy as np
 
 def get_uni_name():
     now = datetime.now()
@@ -23,23 +24,45 @@ def draw_bbox(img, bbox, color = (0, 0, 255)):
     return img
 
 
-def draw_text(img, bbox, text, text_color = (0, 0, 255)):
+def draw_text(img, bbox, text, text_color = (0, 0, 255), font_path = "resources/fonts/zhouzisongti.otf"):
     x1, y1 = bbox[0],bbox[1]
     x2, y2 = bbox[2],bbox[3]
     width = x2 - x1
     height = y2 - y1
 
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1
     color = text_color
     thickness = 1
+    font_scale = 1
 
-    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    try:
+        font_size = 20
+        font = ImageFont.truetype(font_path, font_size)
+        pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(pil_img)
+        # 计算文本的边界框
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
 
-    text_x = x1 + (width - text_width) // 2
-    text_y = y1 + (height + text_height) // 2
+        # 计算文本位置
+        text_x = x1 + (width - text_width) // 2
+        text_y = y1 + (height - text_height) // 2
+        # 绘制文本
+        draw.text((text_x, text_y), text, fill=text_color, font=font)
 
-    cv2.putText(img, text, (text_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
+        # 转换回 OpenCV 格式
+        img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+
+    except Exception as e:
+        print("加载字体文件失败")
+        print(e)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+        text_x = x1 + (width - text_width) // 2
+        text_y = y1 + (height + text_height) // 2
+
+        cv2.putText(img, text, (text_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
 
     return img
 

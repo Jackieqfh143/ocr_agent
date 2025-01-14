@@ -1,0 +1,96 @@
+{
+    "actions": [
+        {
+            "action": "openAppByIcon",
+            "icon": "imgs/youku/app.png",
+            "text": "优酷视频"
+        },
+        {
+            "action": "click_text",
+            "text": "跳过广告",
+             "skipable": true
+        },
+        {
+            "action": "sleep",
+            "duration": 4
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/youku/home.png",
+            "text": "我的"
+        },
+        {
+            "action": "click_text",
+            "text": "登录"
+        },
+        {
+            "action": "sleep",
+            "duration": 3
+        },
+        {
+            "action": "click_text",
+            "text": "更多方式登录"
+        },
+         {
+            "action": "sleep",
+            "duration": 2
+        },
+        {
+            "action": "exist_text",
+            "text": "账号密码登录",
+            "true_action": {
+                        "action": "click_text",
+                        "text": "账号密码登录"
+                        }
+        },
+        {
+            "action": "sleep",
+            "duration": 2
+        },
+        {
+            "action": "click_text",
+            "text": "请输入手机号码"
+        },
+        {
+            "action": "input_text",
+            "text": "mrptest01@youku.com"
+        },
+         {
+            "action": "click_text",
+            "text": "请输入密码"
+        },
+        {
+            "action": "input_text",
+            "text": "test001"
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/youku/pay.png",
+            "text": "登录"
+        },
+        {
+            "action": "before_check",
+            "action_list": [
+                {
+                "action": "exist_text",
+                "text": "版本更新",
+                "true_action": {
+                    "action": "click_text",
+                    "text": "暂不升级",
+                    "skipable": true
+                    }
+                },
+                {
+                "action": "exist_text",
+                "text": "未成年模式",
+                "true_action": {
+                    "action": "click_icon",
+                    "text": "关闭",
+                    "skipable": true
+                    }
+                }
+            ]
+
+        }
+    ]
+}

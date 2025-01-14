@@ -85,12 +85,12 @@ class Segmenter():
                 x, y, w, h = cv2.boundingRect(largest_contour)
                 seg_img = seg_img[y:y + h, x:x + w]
                 seg_mask = seg_mask[y:y + h, x:x + w]
-            b, g, r = cv2.split(seg_img)
-            alpha_channel = np.ones(b.shape, dtype=b.dtype) * 255
-            alpha_channel = np.expand_dims(alpha_channel, axis=-1)
-            alpha_channel[seg_mask == 0] = 0
-            rgba_image = cv2.merge((b, g, r, alpha_channel))
-            Image.fromarray(rgba_image).save(os.path.join(save_dir, get_uni_name() + ".png"))
+            # b, g, r = cv2.split(seg_img)
+            # alpha_channel = np.ones(b.shape, dtype=b.dtype) * 255
+            # alpha_channel = np.expand_dims(alpha_channel, axis=-1)
+            # alpha_channel[seg_mask == 0] = 0
+            # rgba_image = cv2.merge((b, g, r, alpha_channel))
+            Image.fromarray(seg_img).save(os.path.join(save_dir, get_uni_name() + ".png"))
             seg_imgs.append((seg_img, bbox))
             cv2.rectangle(img_copy, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
             print()

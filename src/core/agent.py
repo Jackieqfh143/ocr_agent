@@ -3,6 +3,7 @@ import time
 from src.utils.util import *
 from functools import wraps
 from .icondetector import IconDetector
+from .textdetector import OCR, find_nearest_bbox, find_bbox_by_text
 from src.core.adbcontroller import ADBController
 
 def api(func):
@@ -27,8 +28,12 @@ class Agent():
         self.configs = load_yaml_file(config_path)
         self.max_op_time = self.configs["max_op_time"]
         self.icon_detector = IconDetector(**self.configs["icon_detector"])
+        self.text_detector = OCR(**self.configs["text_detector"])
         self.controller = ADBController(adb_path=self.configs["adb_path"], save_dir=self.configs["save_dir"])
         self.save_dir = self.configs["save_dir"]
+        self.icon_sim_threshold = float(self.configs["icon_sim_threshold"])
+        self.text_score_threshold = float(self.configs["text_detector"]["text_threshold"])
+        self.before_check_actions = []
 
     def sanity_check(self, action_name):
         supported_tasks = get_decorated_methods(self, api)
@@ -36,29 +41,15 @@ class Agent():
             raise Exception("UnSupported Task Error")
 
     def run(self):
+        self.before_check_actions = [item.get("action_list") for item in self.tasks["actions"] if item.get("action") == "before_check"][0]
+        tasks = self.tasks["actions"]
         for action in self.tasks["actions"]:
-            print("input action ", action)
-            if action.get("action"):
-                k = action.get("action")
-                action.pop("action")
-                v = ",".join([str(item) for item in action.values()])
-                print("**************************")
-                print(f"Running Task {k}:{v} ...")
-                start_time = time.time()
-                method = getattr(self, k)
-                if k == "swipe":
-                    args = v.split(",")
-                    status = method(*args)
-                else:
-                    status = method(v)
-                if time.time() - start_time >= self.max_op_time:
-                    raise Exception("Exceed the Maximum Time Error")
+            if len(self.before_check_actions) > 0:
+                self.before_check(self.before_check_actions)
 
-                if status:
-                    print(f"Task {k}:{v} finished in success.")
+            if action.get("action") != "before_check":
+                if self._perform_task(action):
                     continue
-                else:
-                    raise Exception(f"Task {k}: {v} Failed Error")
 
         print("All Task have finished")
         icon_path = os.path.join(self.save_dir, 'tmp_icon.png')
@@ -67,15 +58,16 @@ class Agent():
 
 
     @api
-    def startActivity(self, activity_name):
-        pass
+    def startActivity(self, activity_name, **kwargs):
+        self.controller.start_activity(activity_name)
 
     @api
-    def stopActivity(self, activity_name):
-        pass
+    def stopActivity(self, activity_name, **kwargs):
+        self.controller.stop_activity(activity_name)
 
     @api
-    def openAppByIcon(self, icon):
+    def openAppByIcon(self, icon, text = '', **kwargs):
+        text = text.strip()
         icon_path = os.path.join(self.save_dir, 'tmp_icon.png')
         if os.path.exists(icon_path):
             os.remove(icon_path)
@@ -91,7 +83,11 @@ class Agent():
             print(det_res)
             if len(det_res) > 0 and float(det_res[0][0]) >= float(self.configs["icon_sim_threshold"]):
                 bbox = det_res[0][1]
-                break
+                if text != '':
+                    if self._check_nearby_text(img_cur, bbox, text):
+                        break
+                else:
+                    break
 
             direction = 'left' if swipe_direction == 0 else "right"
             self.swipe(direction, 500, 300)
@@ -111,31 +107,35 @@ class Agent():
         return True
 
     @api
-    def click_icon(self, icon):
-        icon_path = os.path.join(self.save_dir, 'tmp_icon.png')
-        if os.path.exists(icon_path):
-            os.remove(icon_path)
-        load_image(icon).save(icon_path)
+    def click_icon(self, icon, text ='', **kwargs):
         img_cur = self.controller.get_screenshot(scale_ratio=1)
-        det_res = self.icon_detector.det(img_cur, icon_path)
-        if len(det_res) > 0 and float(det_res[0][0]) >= float(self.configs["icon_sim_threshold"]):
-            bbox = det_res[0][1]
+        status,bbox,score = self._find_bbox_by_icon(img_cur, icon)
+        if status and self._check_nearby_text(img_cur, bbox, text):
             print("bbox: ", bbox)
+            print("score: ", score)
             x, y = calculate_center(bbox)
             print("center_x, center_y: ", (x, y))
             self.controller.tap(x, y)
             return True
-        else:
-            raise Exception("Failed to Click Icon Error")
 
         return False
 
     @api
-    def long_press_icon(self, icon):
-        pass
+    def long_press_icon(self, icon, text = '', duration = 1000,  **kwargs):
+        img_cur = self.controller.get_screenshot(scale_ratio=1)
+        status, bbox, score = self._find_bbox_by_icon(img_cur, icon)
+        if status and self._check_nearby_text(img_cur, bbox, text):
+            print("bbox: ", bbox)
+            print("score: ", score)
+            x, y = calculate_center(bbox)
+            print("center_x, center_y: ", (x, y))
+            self.controller.long_press(x, y, duration)
+            return True
+
+        return False
 
     @api
-    def swipe(self, direction, distance, duration):
+    def swipe(self, direction, distance, duration,  **kwargs):
         distance = int(distance)
         duration = int(duration)
         if direction == 'left':
@@ -151,7 +151,143 @@ class Agent():
         return True
 
     @api
-    def sleep(self, seconds):
-        time.sleep(int(seconds))
+    def sleep(self, duration,  **kwargs):
+        time.sleep(int(duration))
         return True
+
+    @api
+    def click_text(self, text, **kwargs):
+        status,bbox, score = self._find_bbox_by_text(text)
+        if status:
+            print("bbox: ", bbox)
+            x, y = calculate_center(bbox)
+            print("center_x, center_y: ", (x, y))
+            self.controller.tap(x, y)
+            return True
+
+        return False
+
+    @api
+    def long_press_text(self, text, duration, **kwargs):
+        status, bbox, score = self._find_bbox_by_text(text)
+        if status:
+            print("bbox: ", bbox)
+            x, y = calculate_center(bbox)
+            print("center_x, center_y: ", (x, y))
+            self.controller.long_press(x, y, duration)
+            return True
+
+        return False
+
+    @api
+    def input_text(self, text):
+        self.controller.type(text)
+        return True
+
+    @api
+    def exist_icon(self, icon, score = None, true_action = {}, false_action = {}):
+        if not score:
+            score = self.icon_sim_threshold
+        status, bbox, pred_score = self._find_bbox_by_icon(icon)
+        if status and pred_score >= score:
+            print(f"Icon {icon} is exist")
+            print("Perform True Action")
+            return self._perform_task(true_action)
+        else:
+            print(f"Icon {icon} does not exist")
+            print("Perform False Action")
+            return self._perform_task(false_action)
+
+    @api
+    def exist_text(self, text, score = None, true_action = {}, false_action = {}):
+        if not score:
+            score = self.text_score_threshold
+        status, bbox, pred_score = self._find_bbox_by_text(text)
+        if status and pred_score >= score:
+            print(f"Text {text} is exist")
+            print("Perform True Action")
+            return self._perform_task(true_action)
+        else:
+            print(f"Text {text} does not exist")
+            print("Perform False Action")
+            return self._perform_task(false_action)
+
+
+    @api
+    def on_error(self, action_list):
+        pass
+
+    @api
+    def before_check(self, action_list):
+        print("Running before tasks")
+        for action in action_list:
+            self._perform_task(action)
+        print("All before tasks have been finished")
+
+
+    def _check_nearby_text(self, img_cur, bbox, text):
+        if text != '':
+            text_det_res = self.text_detector.det(img_cur)
+            _, target_text, target_score = find_nearest_bbox(bbox, *text_det_res)
+            print(f"input text: {text}, nearest text: {target_text}, text_det_score: {target_score}")
+            if target_text == text and target_score >= self.text_score_threshold:
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def _find_bbox_by_icon(self, img_cur, icon):
+        icon_path = os.path.join(self.save_dir, 'tmp_icon.png')
+        if os.path.exists(icon_path):
+            os.remove(icon_path)
+        load_image(icon).save(icon_path)
+        det_res = self.icon_detector.det(img_cur, icon_path)
+        if len(det_res) > 0 and float(det_res[0][0]) >= self.icon_sim_threshold :
+            bbox = det_res[0][1]
+            return True, bbox, float(det_res[0][0])
+        else:
+            return False, None, None
+
+    def _find_bbox_by_text(self, text):
+        img_cur = self.controller.get_screenshot(scale_ratio=1)
+        text_det_res = self.text_detector.det(img_cur)
+        bbox, score = find_bbox_by_text(text, *text_det_res)
+        print(f"_find_bbox_by_text bbox:{bbox} score:{score}")
+        if bbox:
+            return True, bbox, score
+        else:
+            return False, None, None
+
+    def _perform_task(self, action):
+        if not action or len(action) == 0:
+            print("Skip Empty Task")
+            return True
+
+        print("input action ", action)
+        method_name = action.get("action")
+        action.pop("action")
+        args = action
+        print("**************************")
+        print(f"Running Task {method_name}: {args} ...")
+        start_time = time.time()
+        method = getattr(self, method_name)
+        status = method(**args)
+        if time.time() - start_time >= self.max_op_time:
+            raise Exception("Exceed the Maximum Time Error")
+
+        if status:
+            print(f"Task {method_name}: {args} finished in success.")
+            return True
+        elif args.get("skipable"):
+            print(f"Task {method_name}: {args} has been skipped.")
+            return True
+        else:
+            raise Exception(f"Task {method_name}: {args} Failed Error")
+
+
+
+
+
+
 

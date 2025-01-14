@@ -1,0 +1,41 @@
+{
+    "actions": [
+        {
+            "action": "openAppByIcon",
+            "icon": "imgs/youku/app.png",
+            "text": "优酷视频"
+        },
+        {
+            "action": "sleep",
+            "duration": 8
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/youku/vip_channel.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 4
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/youku/pay.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 4
+        },
+        {
+           "action": "click_icon",
+            "icon": "imgs/youku/payment_unwrap.png"
+        },
+        {
+            "action": "sleep",
+            "duration": 4
+        },
+        {
+            "action": "click_icon",
+            "icon": "imgs/youku/pay.png"
+        }
+    ]
+}

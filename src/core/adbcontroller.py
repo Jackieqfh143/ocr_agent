@@ -34,18 +34,17 @@ class ADBController:
         :return: 屏幕宽度, 屏幕高度, 屏幕中心点 (x, y)
         :raises Exception: 如果获取屏幕尺寸失败
         """
+        self.TIME_LIMIT = 10
         command = f"{self.adb_path} shell wm size"
-        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        result = self.run_commad(command)
+        output = result.stdout.strip()
+        size = output.split(": ")[1]
+        width, height = map(int, size.split('x'))
+        center_x = width // 2
+        center_y = height // 2
+        return width, height, (center_x, center_y)
 
-        if result.returncode == 0:
-            output = result.stdout.strip()
-            size = output.split(": ")[1]
-            width, height = map(int, size.split('x'))
-            center_x = width // 2
-            center_y = height // 2
-            return width, height, (center_x, center_y)
-        else:
-            raise Exception(f"Error executing command: {result.stderr}")
+
 
     def swipe(self, start_x, start_y, end_x, end_y, duration):
         """
@@ -58,7 +57,7 @@ class ADBController:
         :param duration: 滑动持续时间（毫秒）
         """
         command = self.adb_path + f" shell input swipe {start_x} {start_y} {end_x} {end_y} {duration}"
-        res = subprocess.run(command, capture_output=True, text=True, shell=True)
+        res = self.run_commad(command)
         print(f"从点 ({start_x},{start_y}) 滑动到 ({end_x},{end_y})")
         print(res)
 
@@ -126,7 +125,7 @@ class ADBController:
         """
         print("模拟按下电源按钮")
         command = self.adb_path + f" shell input keyevent 26"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def get_screenshot(self, scale_ratio=0.5):
         """
@@ -136,13 +135,12 @@ class ADBController:
         :return: 保存的截图路径
         """
         command = self.adb_path + " shell rm /sdcard/screenshot.png"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
-        time.sleep(0.5)
+        res = self.run_commad(command)
+        print(res)
         command = self.adb_path + " shell screencap -p /sdcard/screenshot.png"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
-        time.sleep(0.5)
+        self.run_commad(command)
         command = self.adb_path + f" pull /sdcard/screenshot.png {self.save_dir}"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
         image_path = f"{self.save_dir}/screenshot.png"
         save_path = f"{self.save_dir}/{get_uni_name()}.jpg"
@@ -166,14 +164,13 @@ class ADBController:
         """
         print(f" 录制屏幕并保存视频文件到 {save_name}")
         command = self.adb_path + " shell rm /sdcard/screen_record.mp4"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
-        time.sleep(0.5)
+        self.run_commad(command)
         command = self.adb_path + f" shell screenrecord --time-limit {duration} /sdcard/screen_record.mp4"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
         def delay_task():
             command = self.adb_path + f" pull /sdcard/screen_record.mp4 {self.save_dir}/{save_name}"
-            subprocess.run(command, capture_output=True, text=True, shell=True)
+            self.run_commad(command)
 
         timer = threading.Timer(duration, delay_task)
         timer.start()
@@ -187,7 +184,7 @@ class ADBController:
         """
         print(f" 模拟在坐标 ({x},{y}) 位置的点击操作")
         command = self.adb_path + f" shell input tap {x} {y}"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def long_press(self, x, y, duration):
         """
@@ -211,19 +208,19 @@ class ADBController:
         for char in text:
             if char == ' ':
                 command = self.adb_path + f" shell input text %s"
-                subprocess.run(command, capture_output=True, text=True, shell=True)
+                self.run_commad(command)
             elif char == '_':
                 command = self.adb_path + f" shell input keyevent 66"
-                subprocess.run(command, capture_output=True, text=True, shell=True)
+                self.run_commad(command)
             elif 'a' <= char <= 'z' or 'A' <= char <= 'Z' or char.isdigit():
                 command = self.adb_path + f" shell input text {char}"
-                subprocess.run(command, capture_output=True, text=True, shell=True)
+                self.run_commad(command)
             elif char in '-.,!?@\'°/:;()':
                 command = self.adb_path + f" shell input text \"{char}\""
-                subprocess.run(command, capture_output=True, text=True, shell=True)
+                self.run_commad(command)
             else:
                 command = self.adb_path + f" shell am broadcast -a ADB_INPUT_TEXT --es msg \"{char}\""
-                subprocess.run(command, capture_output=True, text=True, shell=True)
+                self.run_commad(command)
 
     def back(self):
         """
@@ -231,7 +228,7 @@ class ADBController:
         """
         print( "模拟按下返回按钮")
         command = self.adb_path + f" shell input keyevent 4"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def home_btn(self):
         """
@@ -239,31 +236,29 @@ class ADBController:
         """
         print("返回设备主屏幕")
         command = self.adb_path + f" shell am start -a android.intent.action.MAIN -c android.intent.category.HOME"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def start_activity(self, activity_name):
         print(f"启动活动 {activity_name}")
         command = self.adb_path + f" shell am start -n {activity_name}"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def stop_activity(self, activity_name):
         print(f"停止活动 {activity_name}")
         command = self.adb_path + f" shell am force-stop {activity_name}"
-        subprocess.run(command, capture_output=True, text=True, shell=True)
+        self.run_commad(command)
 
     def unlock_phone(self):
         if self.is_screen_off():
             self.power_btn()
-            time.sleep(0.5)
 
         if self.is_screen_locked():
-            time.sleep(0.5)
             print("尝试自动解锁手机")
             self.swipe(self.screen_center[0], self.screen_center[1] + 1000, self.screen_center[0], self.screen_center[1] - 200, 500)
 
     def is_screen_off(self):
         command = self.adb_path + f" shell dumpsys power"
-        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        result = self.run_commad(command)
 
         for line in result.stdout.splitlines():
             if "Display Power" in line:
@@ -278,7 +273,7 @@ class ADBController:
 
     def is_screen_locked(self):
         command = self.adb_path + f" shell dumpsys window policy"
-        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        result = self.run_commad(command)
         lines = result.stdout.splitlines()
         loc_flag = 0
         for i in range(len(lines)):
@@ -294,3 +289,21 @@ class ADBController:
             return False
 
         return None
+    
+    def run_commad(self, command):
+        start_time = time.time()
+        while True:
+            if time.time() - start_time >= self.TIME_LIMIT:
+                raise Exception(f"Exceed Maximum Time Error. Failed to executing commond: {command} ")
+            result = subprocess.run(command, capture_output=True, text=True, shell=True)
+            print(result)
+            if result.returncode == 0:
+                return result
+            else:
+                print(f"Error executing command: {result.stderr}")
+
+            time.sleep(1)
+
+
+
+    
