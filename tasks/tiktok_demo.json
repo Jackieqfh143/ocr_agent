@@ -1,64 +1,123 @@
 {
     "actions": [
         {
-            "action": "openAppByIcon",
+            "action": "back_home"
+        },
+         {
+            "action": "swipe",
+            "direction": "up",
+            "distance": 1200,
+            "duration": 300
+        },
+        {
+            "action": "sleep",
+            "duration": 2
+        },
+        {
+            "action": "click_text",
+            "text": "搜索"
+        },
+        {
+            "action": "sleep",
+            "duration": 2
+        },
+        {
+            "action": "input_text",
+            "text": "抖音"
+        },
+        {
+            "action": "sleep",
+            "duration": 1
+        },
+        {
+            "action": "click_icon",
             "icon": "imgs/tiktok/tiktok.png"
         },
         {
             "action": "sleep",
-            "duration": 8
-        },
-        {
-            "action": "click_icon",
-            "icon": "imgs/tiktok/tiktok_comments.png"
-        },
-        {
-            "action": "sleep",
             "duration": 3
         },
         {
-            "action": "click_icon",
-            "icon": "imgs/tiktok/tiktok_fullscreen.png"
+            "action": "repeat_actions",
+            "action_list": [
+                {
+                    "action": "click_icon",
+                    "icon": "imgs/tiktok/tiktok_comments.png"
+                },
+                 {
+                    "action": "sleep",
+                    "duration": 1
+                },
+                {
+                    "action": "click_icon",
+                    "icon": "imgs/tiktok/tiktok_fullscreen.png"
+                },
+                {
+                    "action": "sleep",
+                    "duration": 1
+                },
+                {
+                    "action": "back"
+                },
+                {
+                    "action": "sleep",
+                    "duration": 2
+                },
+                {
+                    "action": "swipe",
+                    "distance": 700,
+                    "direction": "up",
+                    "duration": 300
+                }
+            ],
+            "repeat_times": 1000
         },
         {
-            "action": "sleep",
-            "duration": 3
-        },
-        {
-            "action": "swipe",
-            "direction": "down",
-            "distance": 600,
-            "duration": 300
-        },
-        {
-            "action": "sleep",
-            "duration": 3
-        },
-        {
-            "action": "swipe",
-            "direction": "up",
-            "distance": 600,
-            "duration": 300
-        },
-        {
-            "action": "sleep",
-            "duration": 3
-        },
-        {
-            "action": "swipe",
-            "direction": "up",
-            "distance": 600,
-            "duration": 300
-        },
-        {
-            "action": "sleep",
-            "duration": 3
-        },
-        {
-            "action": "swipe",
-            "direction": "up",
-            "distance": 600,
-            "duration": 300
+            "action": "on_error",
+            "action_list": [
+                {
+                    "action": "swipe",
+                    "distance": 700,
+                    "direction": "down",
+                     "duration": 300
+                },
+                {
+                    "action": "swipe",
+                    "distance": 800,
+                    "direction": "down",
+                    "duration": 300
+                },
+                {
+                    "action": "sleep",
+                    "duration": 3
+                },
+                {
+                    "action": "back"
+                },
+                {
+                "action": "exist_text",
+                "text": "版本更新",
+                "true_action": {
+                    "action": "click_text",
+                    "text": "暂不升级",
+                    "skipable": true
+                    }
+                },
+                {
+                "action": "exist_text",
+                "text": "未成年模式",
+                "true_action": {
+                    "action": "click_icon",
+                    "text": "关闭",
+                    "skipable": true
+                    }
+                },
+                {
+                    "action": "click_text",
+                    "text": "我知道了",
+                    "skipable": true
+                }
+            ]
         }
     ]
 }

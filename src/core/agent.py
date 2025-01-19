@@ -5,6 +5,7 @@ from functools import wraps
 from .icondetector import IconDetector
 from .textdetector import OCR, find_nearest_bbox, find_bbox_by_text
 from src.core.adbcontroller import ADBController
+from tqdm import  tqdm
 
 def api(func):
     @wraps(func)  # 保留原始函数的元数据
@@ -41,15 +42,24 @@ class Agent():
             raise Exception("UnSupported Task Error")
 
     def run(self):
-        self.before_check_actions = [item.get("action_list") for item in self.tasks["actions"] if item.get("action") == "before_check"][0]
-        tasks = self.tasks["actions"]
+        self.controller.init_task()
+        self.before_check_actions = [item.get("action_list") for item in self.tasks["actions"] if item.get("action") == "before_check"]
+        self.on_error_actions = [item.get("action_list") for item in self.tasks["actions"] if item.get("action") == "on_error"]
         for action in self.tasks["actions"]:
             if len(self.before_check_actions) > 0:
-                self.before_check(self.before_check_actions)
+                self.before_check(self.before_check_actions[0])
 
-            if action.get("action") != "before_check":
-                if self._perform_task(action):
-                    continue
+            action_name = action.get("action")
+            if action_name != "before_check" or action_name != "on_error":
+                try:
+                    if self._perform_task(action):
+                        continue
+                except Exception as e:
+                    print(e)
+                    if len(self.on_error_actions) > 0:
+                        self.on_error(self.on_error_actions[0], self._perform_task, action)
+
+
 
         print("All Task have finished")
         icon_path = os.path.join(self.save_dir, 'tmp_icon.png')
@@ -212,10 +222,23 @@ class Agent():
             print("Perform False Action")
             return self._perform_task(false_action)
 
-
     @api
-    def on_error(self, action_list):
-        pass
+    def on_error(self, action_list, callback, callback_params):
+        print("Running on_error tasks")
+        for i, action in enumerate(action_list):
+            self._perform_task(action)
+            print("Running callback function...")
+            try:
+                callback(callback_params)
+            except Exception as e:
+                if i == len(action_list) - 1:
+                    raise e
+                else:
+                    pass
+            else:
+                break
+
+        print("All on_error tasks have been finished")
 
     @api
     def before_check(self, action_list):
@@ -224,6 +247,23 @@ class Agent():
             self._perform_task(action)
         print("All before tasks have been finished")
 
+    @api
+    def back_home(self, **kwargs):
+        self.controller.home_btn()
+        return True
+
+    @api
+    def back(self, **kwargs):
+        self.controller.back()
+        return True
+
+    @api
+    def repeat_actions(self, action_list, repeat_times):
+        for i in tqdm(range(repeat_times)):
+            print(f"Running the NO {i} repeat_actions")
+            for action in action_list:
+                self._perform_task(action)
+            print(f"The NO {i} repeat_actions have been finished")
 
     def _check_nearby_text(self, img_cur, bbox, text):
         if text != '':
@@ -266,8 +306,7 @@ class Agent():
 
         print("input action ", action)
         method_name = action.get("action")
-        action.pop("action")
-        args = action
+        args = {k:v for k,v in action.items() if k != "action"}
         print("**************************")
         print(f"Running Task {method_name}: {args} ...")
         start_time = time.time()

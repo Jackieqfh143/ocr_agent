@@ -23,7 +23,9 @@ class ADBController:
         self.screen_width, self.screen_height, self.screen_center = self.get_screen_size()
         self.save_dir = os.path.join(save_dir, "screenshot", get_uni_name())
         os.makedirs(self.save_dir, exist_ok=True)
+        self.init_task()
 
+    def init_task(self):
         if self.is_screen_off() or self.is_screen_locked():
             self.unlock_phone()
 
@@ -134,9 +136,9 @@ class ADBController:
         :param scale_ratio: 缩放比例（0-1之间的值）
         :return: 保存的截图路径
         """
-        command = self.adb_path + " shell rm /sdcard/screenshot.png"
-        res = self.run_commad(command)
-        print(res)
+        # command = self.adb_path + " shell rm /sdcard/screenshot.png"
+        # res = self.run_commad(command)
+        # print(res)
         command = self.adb_path + " shell screencap -p /sdcard/screenshot.png"
         self.run_commad(command)
         command = self.adb_path + f" pull /sdcard/screenshot.png {self.save_dir}"
